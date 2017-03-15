@@ -1,0 +1,17 @@
+seed	3	-2
+seed	-6	-8
+seed	-1	-11
+tip	-10	-1
+tip	-7	3
+tip	8	1
+tip	-1	-2
+tip	-10	-4
+tip	-14	-2
+tip	-10	4
+tip	8	2
+tip	7	3
+tip	-10	2
+tip	-7	7
+tip	-11	11
+tip	-2	-5
+tip	3	7
