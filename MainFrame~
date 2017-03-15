@@ -1,0 +1,54 @@
+#! /usr/bin/python
+
+print"hello world"
+vary = raw_input("Enter your Name")
+print ("hey " + vary)
+
+
+# TODO
+# Specifying usb ports might save time
+# Warning that the content of the camera will be deleted
+# modify hook-script
+# set env variable for folder to be used in hook script
+
+# Full screen
+# Another space bar to quit preview
+
+
+#import wx
+#import time
+#from datetime import date
+#import numpy
+#import os			# OS
+#import shutil			# copy files
+#import  wx			# GUI
+
+## Project Modules
+#from ProjectManager import ProjectFrame
+#from ProjectManager import ProjectClass
+
+## Project variables
+#project_obj = ProjectClass.ProjectClass()
+#root_folder = ""#"D:\\LIONEL\\DATA\\MEASURED\\CIRC\\CIRC_EXTRACT"
+#prev_folder = os.getcwd()
+
+#project_obj.root_folder = root_folder
+#project_obj.path = root_folder
+## Iproject_obj.pathnitiate project data
+#app = wx.App(False)
+#frame = ProjectFrame.ProjectFrame(project_obj)
+#frame.SetPosition((100, 20)) 
+#frame.Show()
+#app.MainLoop()
+
+
+## Save project settings before leaving
+#if project_obj.path == project_obj.root_folder:
+#	print "Project not saved"
+#else:
+#	print project_obj.path
+#	print project_obj.root_folder
+#	project_obj.save()
+
+vary = raw_input("Press any key to finish")
+

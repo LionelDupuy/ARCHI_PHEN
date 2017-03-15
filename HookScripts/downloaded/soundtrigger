@@ -1,0 +1,124 @@
+#!/usr/bin/perl
+
+# Copyright (c) 2008 John Watson. All rights reserved.
+# http://photodoto.com/index.php/2008/02/25/tethered-shooting-with-linux/
+# 
+# Redistribution and use in source and binary forms, with or without modification,
+# are permitted provided that the following conditions are met:
+# 
+#     * Redistributions of source code must retain the above copyright notice,
+#       this list of conditions and the following disclaimer.
+#     * Redistributions in binary form must reproduce the above copyright notice,
+#       this list of conditions and the following disclaimer in the documentation
+#       and/or other materials provided with the distribution.
+#     * Neither the name of the organization nor the names of its contributors
+#       may be used to endorse or promote products derived from this software
+#       without specific prior written permission.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+# A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+# PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+# NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+use Audio::DSP;
+use Time::HiRes qw( usleep );
+use Term::ReadKey;
+
+$SENSITIVITY = 1;
+$CAMERA_FOLDER = "/store_00010001";
+
+my ($buf, $chan, $fmt, $rate) = (4096, 1, 16, 8000);
+
+my $dsp = new Audio::DSP(
+	buffer   => $buf,
+	channels => $chan,
+	format   => $fmt,
+	rate     => $rate
+);
+
+$sound = 1;
+
+if (!$dsp->init()) {
+	$sound = 0
+};
+$dsp->reset();
+
+if ($sound == 0) {
+	print STDERR "Sound could not be initialized. Using keyboard mode only.\n";
+}
+
+open(CAMERA, "|gphoto2 --folder /$CAMERA_FOLDER --shell >gphoto.log");
+select(CAMERA);
+$| = 1;
+
+print STDERR "Press [spacebar] to take a photo. Press [q] to quit.\n";
+ReadMode 4;
+
+$n = 0;
+while (1) {
+	if ($sound) {
+		$value = getDSPValue();
+	}
+	$key = ReadKey(-1);
+	$value = 9999 if ($key eq ' ');
+	last if ($key eq 'q');
+	if ($value > $SENSITIVITY) {
+		print CAMERA "capture-image\n";
+		print CAMERA sprintf("get capt%04d.jpg\n", $n);
+		print CAMERA sprintf("delete capt%04d.jpg\n", $n);
+		sleep(3);
+		if ($sound) {
+			$dsp->reset() || die "Could not reset";
+		}
+		print STDERR "Ready...\n";
+		$n++;
+	}
+	usleep(250);
+}
+
+ReadMode 0;
+
+close(CAMERA);
+
+if ($sound) {
+	$dsp->close();
+}
+
+exit;
+
+sub getDSPValue {
+	# Original code for this found here:
+	# http://www.perlmonks.org/?node_id=567312
+	my $samples = 15;
+	my $num_tot = 0;
+	my $div_tot = 0;
+	my $value = 0;
+
+	# Record x samples of sound
+	for (1..$samples) {
+		# read 16 bits of raw data
+		my $data = $dsp->dread(16) || return 0;
+		my $num =  unpack('v', $data);
+
+		#filter out baseline noise
+		if($num > 65000) {
+			next;
+		} else {
+			$num_tot += $num;
+			$div_tot += 32768; # gives a good average
+		}
+	}
+
+	if ($div_tot != 0) {
+		$value = ($num_tot/$div_tot) * 100;
+	} 
+
+	return $value;
+}

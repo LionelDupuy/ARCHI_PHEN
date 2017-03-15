@@ -1,0 +1,607 @@
+import os
+import shutil			# copy files	
+from random import randrange
+import pylab as plt
+import numpy as np
+
+######################################################################
+# join folders
+######################################################################
+sep = '\\'
+if os.name == 'posix':
+	sep = '/'
+def dir_join(global_dir):
+	if len(global_dir.split(sep)) > len(global_dir.split('/')):
+		global_dir = global_dir.split(sep)
+	else:
+		global_dir = global_dir.split('/')
+
+	path = ""
+	for item in global_dir:
+		path = os.path.join(path,item)
+	return path
+######################################################################
+# Data structure
+######################################################################	
+class RootSystem():
+	def __init__(self):
+		self.n_roots = ""
+		self.root_folder = os.path.join("D:","LIONEL","DATA","MEASURED","CIRC","CIRC_EXTRACT")
+
+		self.species = []
+		self.project_structure = ""
+		self.image_file_list = []
+		self.n_duplicates = 1
+
+class EmptyGenotype:
+    def __init__(self):
+		self.genotype = ""
+		self.population = ""
+		self.species = ""
+
+class ProjectClass():
+	def __init__(self):
+		self.path = ""
+		self.root_folder = "D:\\LIONEL\\DATA\\MEASURED\\CIRC\\CIRC_EXTRACT"
+		self.root_folder = dir_join(self.root_folder)
+		self.species = []
+		self.project_structure = ""
+		self.image_file_list = []
+		self.n_duplicates = 1
+		
+	
+		self.label = ""
+		self.genotype = EmptyGenotype()
+		
+	def get_project_structure(self):
+		species_list = os.listdir(self.path)
+		for spe in species_list:
+			if os.path.isdir(self.path+sep+spe):
+				new_spe = SpeciesClass(spe) #
+				pop_list = os.listdir(self.path+sep+spe)
+				for pop in pop_list:
+					if os.path.isdir(self.path+sep+spe + sep + pop):
+						new_pop = PopulationClass(pop) #
+						gen_list = os.listdir(self.path+sep+spe + sep + pop)
+						for gen in gen_list:
+							new_pop.add(gen, self.path+sep+spe + sep + pop+ sep + gen) #genotypes.append(new_gen)
+						new_spe.populations.append(new_pop)
+				self.species.append(new_spe)
+	def get_project_sample(self):
+		image_file_list = []
+		# Winter barley
+		pop = self.species[0].populations[1]
+		n = len(pop.genotypes)
+		for i in range(6):
+			# get genotypes
+			r = randrange(n)
+			gen = pop.genotypes[r]
+			
+			# get plants
+			m = len(gen.plants)
+			for j in range(3):
+				file = (gen.plants[j].directory).replace("_SEED_","_CROP_")
+				file = file.replace("txt","jpg")
+				image_file_list.append(file)
+			
+		# Brassica
+		pop = self.species[1].populations[0]
+		n = len(pop.genotypes)
+		for i in range(6):
+			# get genotypes
+			r = randrange(n)
+			while len(pop.genotypes[r].plants)<3:
+				r = randrange(n)
+			gen = pop.genotypes[r]
+			
+			# get plants
+			m = len(gen.plants)
+			for j in range(3):
+				file = (gen.plants[j].directory).replace("_SEED_","_CROP_")
+				file = file.replace("txt","jpg")
+				image_file_list.append(file)
+				
+		return image_file_list
+	def print_project_structure(self):
+		for spec in self.species:
+			self.project_structure += "spec: "+spec.id + "\n"
+			for pop in spec.populations:
+				self.project_structure += "\t pop: "+pop.id + "\n"
+				for gen in pop.genotypes:
+					self.project_structure += "\t\t gen: "+ gen.id + "\n"
+					for plant in gen.plants:
+						self.project_structure += "\t\t\t rep: "+ plant.id + "_im" + str(plant.pic_id[0]) + "\n"	
+	def view_data(self, pop_id = "TN"):
+		self.get_project_structure()
+		
+		# germination rate
+		germination_rate = []
+		genotype1 = []
+		genotype2 = []
+		for spec in self.species:
+			for pop in spec.populations:
+				if pop.id == pop_id:
+					for gen in pop.genotypes:
+						count = 0
+						sub = 0
+						for plant in gen.plants:
+							if len(plant.globals) > 0:
+								
+								if len(plant.globals[-1]) > 0: # if the latest root system has no roots
+															   # abort / not germinated
+									if plant.globals[-1][0][1] > 1:
+										#if spec.id == "Barl":
+										#	print "MERDE: ", plant.globals[-1][-1][1]
+										count +=1
+							else:
+								sub += 1
+						
+						if len(gen.plants) - sub >3:
+							germination_rate.append(float(count) / float(len(gen.plants) - sub))
+							genotype1.append(gen.id)
+				
+		# Root angle
+		root_angle = []
+		for spec in self.species:
+			for pop in spec.populations:
+				if pop.id == pop_id:
+					for gen in pop.genotypes:
+						row = []
+						for plant in gen.plants:
+							if len(plant.globals) > 0:
+								if len(plant.globals[-1]) > 0: # if the latest root system has no roots
+															   # abort / not germinated
+									if plant.globals[-1][-1][1] > 1:
+										row.append(plant.globals[-1][-1][3])
+							else:
+								sub += 1
+						row = np.array(row)
+						if len(row) > 0:
+							root_angle.append([np.mean(row), np.min(row), np.max(row), -np.min(row)+np.max(row),len(row)])	
+						else:
+							root_angle.append([0, 0, 0, 0,0])	
+						genotype2.append(gen.id)
+
+		# Root depth
+		root_depth = []
+		for spec in self.species:
+			for pop in spec.populations:
+				if pop.id == pop_id:
+					for gen in pop.genotypes:
+						row = []
+						for plant in gen.plants:
+							if len(plant.globals) > 0:
+								if len(plant.globals[-1]) > 0: # if the latest root system has no roots
+															   # abort / not germinated
+									depth = 0
+									for i in range(len(plant.globals[-1])):
+										depth = max(plant.globals[-1][i][2], depth)
+									row.append(depth)
+							else:
+								sub += 1
+						if len(row) > 0:
+							root_depth.append([np.mean(row), np.std(row), len(row)])
+						else:
+							root_depth.append([0, 0, 0])
+
+			
+	def get_image_file_list(self):
+		self.image_file_list = []
+		species_list = os.listdir(self.path)
+		for spe in species_list:
+			if os.path.isdir(self.path+sep+spe):
+				pop_list = os.listdir(self.path+sep+spe)
+				for pop in pop_list:
+					if os.path.isdir(self.path+sep+spe + sep + pop):
+						gen_list = os.listdir(self.path+sep+spe + sep + pop)
+						for gen in gen_list:
+							if os.path.isdir(self.path+sep+spe + sep + pop+ sep + gen):	
+								plant_list = os.listdir(self.path+sep+spe + sep + pop+ sep + gen)
+								for plant in plant_list:
+									row = plant.split('_')
+									if len(row)>2:
+										if row[-2] == 'CROP':
+											self.image_file_list.append(self.path+sep+spe + sep + pop+ sep + gen+sep+plant)
+		return self.image_file_list
+		
+	def get_noseed_file_list(self):
+		self.image_file_list = []
+		species_list = os.listdir(self.path)
+		for spe in species_list:
+			if os.path.isdir(self.path+sep+spe):
+				pop_list = os.listdir(self.path+sep+spe)
+				for pop in pop_list:
+					if os.path.isdir(self.path+sep+spe + sep + pop):
+						gen_list = os.listdir(self.path+sep+spe + sep + pop)
+						for gen in gen_list:
+							if os.path.isdir(self.path+sep+spe + sep + pop+ sep + gen):	
+								plant_list = os.listdir(self.path+sep+spe + sep + pop+ sep + gen)
+								for plant in plant_list:
+									row = plant.split('_')
+									row2 = plant.split('.')
+									plant_global_dir = self.path+sep+spe + sep + pop+ sep + gen+sep+plant
+									if len(row)>2:
+										if row[-2] == 'CROP':
+											seed = plant.replace("CROP","SEED")
+											seed = seed.replace(row2[-1],"txt")
+											seed_global_dir = self.path+sep+spe + sep + pop+ sep + gen+sep+seed
+											tip = plant.replace("CROP","TIP")
+											tip = tip.replace(row2[-1],"txt")
+											tip_global_dir = self.path+sep+spe + sep + pop+ sep + gen+sep+tip
+											
+											if (not os.path.isfile(seed_global_dir)) or (not os.path.isfile(tip_global_dir)):
+												self.image_file_list.append(self.path+sep+spe + sep + pop+ sep + gen+sep+plant)
+		return self.image_file_list
+	def get_seed_file_list(self):
+		self.image_file_list = []
+		species_list = os.listdir(self.path)
+		for spe in species_list:
+			if os.path.isdir(self.path+sep+spe):
+				pop_list = os.listdir(self.path+sep+spe)
+				for pop in pop_list:
+					if os.path.isdir(self.path+sep+spe + sep + pop):
+						gen_list = os.listdir(self.path+sep+spe + sep + pop)
+						for gen in gen_list:
+							if os.path.isdir(self.path+sep+spe + sep + pop+ sep + gen):	
+								plant_list = os.listdir(self.path+sep+spe + sep + pop+ sep + gen)
+								for plant in plant_list:
+									row = plant.split('_')
+									row2 = plant.split('.')
+									plant_global_dir = self.path+sep+spe + sep + pop+ sep + gen+sep+plant
+									if len(row)>2:
+										if row[-2] == 'CROP':
+											seed = plant.replace("CROP","SEED")
+											seed = seed.replace(row2[-1],"txt")
+											seed_global_dir = self.path+sep+spe + sep + pop+ sep + gen+sep+seed
+											tip = plant.replace("CROP","TIP")
+											tip = tip.replace(row2[-1],"txt")
+											tip_global_dir = self.path+sep+spe + sep + pop+ sep + gen+sep+tip
+											
+											if (os.path.isfile(seed_global_dir)) and  (os.path.isfile(tip_global_dir)):
+												self.image_file_list.append(seed_global_dir)
+											#if (os.path.isfile(tip_global_dir)):
+											#	self.image_file_list.append(tip_global_dir)											
+		return self.image_file_list
+
+#######################################################seb##########################################################
+	def create_data_files(self,path):
+		import os, sys, math, fnmatch
+		import Functions
+
+		Data = Functions.extract_data (path)
+	
+		Functions.create_data("young",Data,path)
+
+		Functions.create_data("old",Data,path)
+		
+		Functions.create_elongation_data(Data,path)
+
+		print ("Files done")
+
+	def get_error_file_list(self):
+		import Functions
+		error_list = Functions.picture_errors(self.path)
+
+		first = True
+		self.image_file_list = []
+		species_list = os.listdir(self.path)
+		for spe in species_list:
+			if os.path.isdir(self.path+sep+spe):
+				pop_list = os.listdir(self.path+sep+spe)
+				for pop in pop_list:
+					if os.path.isdir(self.path+sep+spe + sep + pop):
+						gen_list = os.listdir(self.path+sep+spe + sep + pop)
+						for gen in gen_list:
+							if os.path.isdir(self.path+sep+spe + sep + pop+ sep + gen):	
+								plant_list = os.listdir(self.path+sep+spe + sep + pop+ sep + gen)
+								plant_list.sort()
+								for plant in plant_list:
+									row = plant.split('_')
+									row2 = plant.split('.')
+									plant_global_dir = self.path+sep+spe + sep + pop+ sep + gen+sep+plant
+									if len(row)>2:
+										if row[-2] == "CROP":
+											counter = 0
+											error = error_list[counter]
+											while row[2] != error[3] and counter < len(error_list):
+												counter = counter + 1
+												if counter != len(error_list):
+													error = error_list[counter]
+											if counter != len(error_list):
+												if first == True:
+													first = False 
+												else :
+													seed = plant.replace("CROP","SEED")
+													seed = seed.replace(row2[-1],"txt")
+													seed_global_dir = self.path+sep+spe + sep + pop+ sep + gen+sep+seed
+													tip = plant.replace("CROP","TIP")
+													tip = tip.replace(row2[-1],"txt")
+													tip_global_dir = self.path+sep+spe + sep + pop+ sep + gen+sep+tip
+													first = True
+											
+													if (os.path.isfile(seed_global_dir)) and  (os.path.isfile(tip_global_dir)):
+														self.image_file_list.append(seed_global_dir)
+													#if (os.path.isfile(tip_global_dir)):
+													#	self.image_file_list.append(tip_global_dir)											
+		return self.image_file_list
+
+	def get_check_error_file_list(self):
+		import Functions
+		error_list = Functions.check_errors()
+		#print error_list[0]
+		
+		first = True
+		self.image_file_list = []
+		species_list = os.listdir(self.path)
+		for spe in species_list:
+			if os.path.isdir(self.path+sep+spe):
+				pop_list = os.listdir(self.path+sep+spe)
+				for pop in pop_list:
+					if os.path.isdir(self.path+sep+spe + sep + pop):
+						gen_list = os.listdir(self.path+sep+spe + sep + pop)
+						for gen in gen_list:
+							if os.path.isdir(self.path+sep+spe + sep + pop+ sep + gen):	
+								plant_list = os.listdir(self.path+sep+spe + sep + pop+ sep + gen)
+								for plant in plant_list:
+									row = plant.split('_')
+									row2 = plant.split('.')
+									plant_global_dir = self.path+sep+spe + sep + pop+ sep + gen+sep+plant
+									if len(row)>2:
+										if row[-2] == 'CROP':
+											counter = 0
+											error = error_list[counter]
+											while (row[2] != error[2] and row[2] != error[3] and row[2] != error[4] and row[2] != error[5]) and counter < len(error_list):
+												counter = counter + 1
+												if counter != len(error_list):
+													error = error_list[counter]
+											if counter != len(error_list):
+												if first == True:
+													first = False 
+												else :
+													seed = plant.replace("CROP","SEED")
+													seed = seed.replace(row2[-1],"txt")
+													seed_global_dir = self.path+sep+spe + sep + pop+ sep + gen+sep+seed
+													tip = plant.replace("CROP","TIP")
+													tip = tip.replace(row2[-1],"txt")
+													tip_global_dir = self.path+sep+spe + sep + pop+ sep + gen+sep+tip
+													first = True
+											
+													if (os.path.isfile(seed_global_dir)) and  (os.path.isfile(tip_global_dir)):
+														self.image_file_list.append(seed_global_dir)
+													#if (os.path.isfile(tip_global_dir)):
+													#	self.image_file_list.append(tip_global_dir)									
+		return self.image_file_list
+
+	def get_path_file_list(self):
+		self.image_file_list = []
+		species_list = os.listdir(self.path)
+		for spe in species_list:
+			if os.path.isdir(self.path+sep+spe):
+				pop_list = os.listdir(self.path+sep+spe)
+				for pop in pop_list:
+					if os.path.isdir(self.path+sep+spe + sep + pop):
+						gen_list = os.listdir(self.path+sep+spe + sep + pop)
+						for gen in gen_list:
+							if os.path.isdir(self.path+sep+spe + sep + pop+ sep + gen):	
+								plant_list = os.listdir(self.path+sep+spe + sep + pop+ sep + gen)
+								for plant in plant_list:
+									row = plant.split('_')
+									row2 = plant.split('.')
+									plant_global_dir = self.path+sep+spe + sep + pop+ sep + gen+sep+plant
+									if len(row)>2:
+										if row[-2] == 'CROP':
+											seed = plant.replace("CROP","OUT")
+											seed = seed.replace(row2[-1],"txt")
+											seed_global_dir = self.path+sep+spe + sep + pop+ sep + gen+sep+seed											
+											if (os.path.isfile(seed_global_dir)) :
+												seed_global_dir = seed_global_dir.replace("OUT","CROP")
+												seed_global_dir = seed_global_dir.replace("txt","jpg")
+												self.image_file_list.append(seed_global_dir)
+										
+		return self.image_file_list	
+	def get_current_folder_seed_list(self, my_path):
+		image_file_list = []
+		file_list = os.listdir(my_path)	
+		for file in file_list:
+			if "SEED" in file:
+				image_file_list.append(my_path + "\\" + file)
+		return image_file_list			
+	def save(self):
+		f = open(self.path + "/config.phe", "w")
+		f.write("Path\t" +self.path + "\n")
+		f.write("Duplicates\t" +str(self.n_duplicates) + "\n")
+		f.close()
+
+	def load(self, path):
+		#path2 = "/Home/DATA/CIRC_DATABASE"
+		#print "coucou: ", path
+		#f = open(path2 + "/config.phe", "r")
+		f = open(path + "/config.phe", "r")
+		file_data = []
+		for line in f:
+			row = line.split('\t')
+			file_data.append(row[1])
+		#self.path = file_data[0]
+		self.n_duplicates = int(file_data[1])
+		f.close()		
+
+	def get_genotype(self):
+		row = self.label.split("_")
+		if len(row) == 3:
+			self.genotype = EmptyGenotype()
+			self.genotype.species = row[0]
+			self.genotype.population = row[1]
+			self.genotype.genotype = row[2]	
+	
+	def import_data(self, date, source):	
+			global_file_path = str(self.path)+sep+str(self.genotype.species)+sep
+			if not(os.path.exists(global_file_path)):
+				os.mkdir(global_file_path)
+			global_file_path += self.genotype.population+sep		
+			if not(os.path.exists(global_file_path)):
+				os.mkdir(global_file_path)
+			global_file_path += self.genotype.genotype+sep		
+			if not(os.path.exists(global_file_path)):
+				os.mkdir(global_file_path)
+
+			# file name		
+			global_file_path +=  self.genotype.species 
+			global_file_path +=  "_" + self.genotype.population 
+			global_file_path +=  "_" + self.genotype.genotype 
+			global_file_path += "_"  + str(date)# +".jpg"
+
+
+			# Copy files
+			shutil.copy(source+ "-QR-.jpg", global_file_path+"_QR_.jpg")	
+			shutil.copy(source+ "-CROP-.jpg", global_file_path+"_CROP_.jpg")				
+			#if os.path.exists(global_file_path): 
+		
+		# Reset genotype data
+			self.label = ""		
+
+class SpeciesClass():
+	def __init__(self, ID):
+		self.id = ID
+		self.populations = []
+class PopulationClass():
+	def __init__(self, ID):
+		self.id = ID
+		self.genotypes = []
+
+	def get(self, gen):
+		row = gen.split('#')	
+		gen_inst = None #GenotypeClass(gen)
+		for gen_inst_i in self.genotypes:
+			if row[0] == gen_inst_i.id:
+				gen_inst = gen_inst_i
+				break
+		return gen_inst
+		
+	def add(self, gen, directory):
+		row = gen.split('#')
+		gen_inst = self.get(gen)
+		if gen_inst:
+			gen_inst.add_block(row[1], directory)
+		else:
+			new_gen = GenotypeClass(row[0])
+			self.genotypes.append(new_gen)
+			new_gen.add_block(row[1], directory)
+		
+class GenotypeClass():
+	def __init__(self, ID):
+		self.id = ID
+		self.plants = []
+	def add_block(self,id,directory):
+		self.get_plants_from_image(id, directory)
+
+	# read position of the seed to determine plant ID
+	def get_plants_from_image(self, id, directory):
+		im_list = os.listdir(directory)
+		for ff in im_list:
+			file2 = directory+sep+ff
+			if ("SEED" in file2) and (".txt" in file2):
+				# Get pic number to know time
+				row = file2.split("_")
+				pic_id = row[4]
+
+				# Open both seed file
+				file = file2.replace("_SEED_","_OUT_")
+				g = open(file2,"r")
+				seeds = []
+				for line in g:
+					row = line.split("\t")
+					seeds.append(int(row[0]))
+				g.close()
+				
+				# find order seeds
+				mi = min(seeds)
+				ma = max(seeds)
+				s_mi = -1
+				s_ma = -1
+				ordered = [-1]*len(seeds)
+				k=1
+				for i in range(len(seeds)):
+					if seeds[i] == mi:
+						ordered[i] = 0
+					elif seeds[i] == ma:
+						ordered[i] = len(seeds)-1
+					else:
+						ordered[i] = k
+						k+=1
+				
+				if (os.path.isfile(file)): 				
+					# open segmentation res file
+					f = open(file,"r")
+					i_plant=0
+					plant = None
+					itest = 0
+					for line in f:
+						itest += 1
+						row = line.split(":")
+						# Line indicates a new plant (seed) is found
+						if "Plant" in row[0]:
+							plant_id = id+"_"+str(ordered[i_plant])
+							if i_plant == 0:
+								plant = self.get_plant(plant_id)
+								if plant == None:	
+									plant = PlantClass(plant_id, file2) # directory
+									self.plants.append(plant)
+								else:
+									pass
+								DATA = []	# roots for 1 plant
+								(plant.pic_id).append(pic_id)
+								
+							else:
+								# this is a new plant
+								# get the roots in the previous plant first
+								plant.add_root(DATA)
+								
+								# get the new plant
+								plant = self.get_plant(plant_id)
+								if plant == None:	
+									plant = PlantClass(plant_id, file2)
+									self.plants.append(plant)
+								else:
+									pass
+								DATA = []	# roots for 1 plant
+								(plant.pic_id).append(pic_id)
+							i_plant += 1
+							
+						# Line indicates a new root is found (a new tip associated with the current seed)
+						if "Root" in row[0]:
+							data = []
+							row2 = row[1].split(",")
+							for d in row2:
+								data.append(float(d))
+							DATA.append(data)
+					if plant != None:
+						plant.add_root(DATA)
+					else:
+						print "Warning! Plant not found"
+					f.close()
+					
+				# IF THERE'S JSUT SEEDS, THEN RUN JUST ADD ONE PLANT PER IMAGE	
+				elif (os.path.isfile(file2)): 
+					plant = PlantClass(id, file2)
+					self.plants.append(plant)
+					(plant.pic_id).append(pic_id)
+				
+	def get_plant(self,id):
+		for plant in self.plants:
+			if plant.id == id:
+				return plant
+				break
+		return None	
+		
+		
+class PlantClass():
+	def __init__(self, ID, directory):
+		self.id = ID		
+		self.globals = []
+		self.roots = []
+		self.pic_id = []
+		self.directory = directory
+	def add_root(self, DATA):
+		self.globals.append(DATA)
+		
+		

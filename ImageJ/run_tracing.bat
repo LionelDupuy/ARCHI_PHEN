@@ -1,0 +1,1 @@
+imagej -macro "C:\\Program Files\\ImageJ\\plugins\\root_tracing\\TraceMacro.txt" "D:\\LIONEL\\DATA\\MEASURED\\CIRC\\CIRC_EXTRACT\\Barl\\Spring\\Westmins#4\\Barl_Spring_Westmins#4_5679"

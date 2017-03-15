@@ -1,0 +1,8 @@
+macro "trace_macro" {
+	//setTool("point");
+	name = getArgument; 
+   	if (name=="") exit ("No argument!"); 
+	open(name+"_CROP_.jpg");
+	run("RootTracing ",name);
+	//run("Close All");
+}

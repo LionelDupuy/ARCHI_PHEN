@@ -1,0 +1,1 @@
+imagej -macro "C:\\Program Files\\ImageJ\\plugins\\root_tracing\\TraceMacro.txt" "D:\\LIONEL\\DATA\\MEASURED\\CIRC\\CIRC_EXTRACT\\Bnap\\TN\\022#5\\Bnap_TN_022#5_0799"

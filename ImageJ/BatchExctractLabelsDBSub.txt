@@ -1,0 +1,39 @@
+  macro "Batch Convert to Binary" {
+      requires("1.33s");
+      dir = getDirectory("Choose a Directory ");
+      LIST_G = getFileList(dir);
+      //setBatchMode(true);
+      for (j=0; j<LIST_G.length; j++) {
+	  if (endsWith(LIST_G[j], "/"))
+		{
+		LIST_D = getFileList(dir+LIST_G[j]);
+      		for (k=0; j<LIST_D.length; j++) {
+	  		if (endsWith(LIST_D[k], "/"))
+				{
+				list = getFileList(dir+LIST_G[j]+LIST_D[k]);
+      				for (i=0; i<list.length; i++) {
+          				path = dir+LIST_G[j]+LIST_D[k]+list[i];
+         	 			open(path);
+         	 			run("root analysis QR");
+					if (isOpen("ROI Manager")) { 
+						selectWindow("ROI Manager"); 
+						run("Close"); 
+						}	
+
+
+         	 			open(path);
+          	 			run("root analysis bounds");
+			 		if (isOpen("ROI Manager")) { 
+						selectWindow("ROI Manager"); 
+						run("Close"); 
+						}
+					}
+		  
+				}
+			
+      			}
+		}
+	}
+  }
+ 
+

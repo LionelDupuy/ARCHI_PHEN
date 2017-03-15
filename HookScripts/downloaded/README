@@ -1,0 +1,43 @@
+Copyright (c) 2008 John Watson. All rights reserved.
+http://photodoto.com/index.php/2008/02/25/tethered-shooting-with-linux/
+
+See LICENSE for licensing information.
+
+These scripts require gphoto2 (http://www.gphoto.org/).
+
+The soundtrigger script requires Perl and the following modules:
+	Audio::DSP
+	Term::ReadKey
+	Time::HiRes
+
+USAGE
+
+Put the scripts on your path or run them from the current folder.
+Image files are downloaded and put in the current directory.
+
+1. Connect your camera to the computer using a USB cable.
+2. Run tether.
+3. Take a picture.
+
+It may take a second or two for photos to be downloaded depending
+on the speed of your USB connection and camera.
+
+
+TROUBLESHOOTING
+
+If photos are not being automatically displayed when using tether
+but everything else seems to be working then you may not have the
+Eye of Gnome (eog) image display program. You can either install it
+or change the view script to use a different image viewer.
+
+
+Test if gphoto recognizes your camera by typing
+
+	gphoto2 --auto-detect
+
+
+It's possible you may need to tweak the value of CAMERA_FOLDER
+in tether or soundtrigger. You can find the correct folder for
+your camera by typing
+
+	gphoto2 --list-folders

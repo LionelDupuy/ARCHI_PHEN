@@ -1,0 +1,4 @@
+#! /usr/bin/python
+print"hello world"
+vary = raw_input("Enter your Name")
+print ("hey " + vary)

@@ -1,0 +1,6 @@
+if "SEED" in file:
+	file_base = file.replace("_SEED_.txt","")
+	print "processing: ", file_base
+	p = subprocess.call(["imagej","-macro","C:\\Program Files\\ImageJ\\plugins\\root_tracing\\TraceMacro.txt", file_base])
+	
+
